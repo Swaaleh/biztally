@@ -12,15 +12,45 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 });
 
+interface ValidationErrors {
+  name: string;
+  price: string;
+  stock: string;
+}
+
+// Reusable validation function
+function validateProduct(product: { name: string; price: string | number; stock: string | number }) {
+  const errors: ValidationErrors = { name: '', price: '', stock: '' };
+  let valid = true;
+
+  if (!product.name.trim()) {
+    errors.name = 'Product name is required.';
+    valid = false;
+  }
+  if (!product.price || Number(product.price) <= 0) {
+    errors.price = 'Price must be a positive number.';
+    valid = false;
+  }
+  if (product.stock === '' || Number(product.stock) < 0) {
+    errors.stock = 'Stock cannot be negative.';
+    valid = false;
+  }
+
+  return { valid, errors };
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [newProduct, setNewProduct] = useState({ name: '', price: '', stock: '' });
   const [productsLoading, setProductsLoading] = useState(true);
   const [addLoading, setAddLoading] = useState(false);
-  const [errors, setErrors] = useState({ name: '', price: '', stock: '' });
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [errors, setErrors] = useState<ValidationErrors>({ name: '', price: '', stock: '' });
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editErrors, setEditErrors] = useState<ValidationErrors>({ name: '', price: '', stock: '' });
 
-  // Fetch products from the database
+  // Fetch products
   const fetchProducts = async () => {
     setProductsLoading(true);
     const { data, error } = await supabase
@@ -43,41 +73,26 @@ export default function ProductsPage() {
     fetchProducts();
   }, []);
 
-  // CREATE: Add a new product
+  // CREATE
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError(null);
+
+    const { valid, errors } = validateProduct(newProduct);
+    if (!valid) {
+      setErrors(errors);
+      return;
+    }
     setErrors({ name: '', price: '', stock: '' });
-
-    const { name, price, stock } = newProduct;
-    let hasError = false;
-
-    // Validation
-    if (!name) {
-      setErrors((prev) => ({ ...prev, name: 'Product name is required.' }));
-      hasError = true;
-    }
-    if (!price || parseFloat(price) <= 0) {
-      setErrors((prev) => ({ ...prev, price: 'Price must be a positive number.' }));
-      hasError = true;
-    }
-    if (!stock || parseInt(stock) < 0) {
-      setErrors((prev) => ({ ...prev, stock: 'Stock cannot be negative.' }));
-      hasError = true;
-    }
-    if (hasError) return;
 
     setAddLoading(true);
     const productData: ProductInsert = {
-      name,
-      price: parseFloat(price),
-      stock: parseInt(stock),
+      name: newProduct.name,
+      price: parseFloat(newProduct.price),
+      stock: parseInt(newProduct.stock),
     };
 
-    const { data, error } = await supabase
-      .from('products')
-      .insert(productData)
-      .select('*');
+    const { data, error } = await supabase.from('products').insert(productData).select('*');
 
     if (error) {
       setGeneralError(error.message || 'Error creating product.');
@@ -85,27 +100,60 @@ export default function ProductsPage() {
     } else if (data && data.length > 0) {
       setProducts((prev) => [data[0], ...prev]);
       setNewProduct({ name: '', price: '', stock: '' });
-      setGeneralError(null);
     }
     setAddLoading(false);
   };
 
-  // DELETE: Delete a product
-  const handleDelete = async (productId: string) => {
-    const originalProducts = products;
-    setProducts(products.filter(p => p.id !== productId));
+  // UPDATE
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
 
+    const { valid, errors } = validateProduct({
+      name: editingProduct.name,
+      price: editingProduct.price ?? '',
+      stock: editingProduct.stock ?? '',
+    });
+
+    if (!valid) {
+      setEditErrors(errors);
+      return;
+    }
+    setEditErrors({ name: '', price: '', stock: '' });
+
+    setUpdateLoading(true);
     const { error } = await supabase
       .from('products')
-      .delete()
-      .eq('id', productId);
+      .update({
+        name: editingProduct.name,
+        price: editingProduct.price,
+        stock: editingProduct.stock,
+      })
+      .eq('id', editingProduct.id);
+
+    if (error) {
+      setGeneralError('Error updating product.');
+      console.error(error);
+    } else {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === editingProduct.id ? editingProduct : p))
+      );
+      setEditingProduct(null);
+    }
+    setUpdateLoading(false);
+  };
+
+  // DELETE
+  const handleDelete = async (productId: string) => {
+    const originalProducts = products;
+    setProducts(products.filter((p) => p.id !== productId));
+
+    const { error } = await supabase.from('products').delete().eq('id', productId);
 
     if (error) {
       setGeneralError('Error deleting product.');
       console.error(error);
       setProducts(originalProducts);
-    } else {
-      setGeneralError(null);
     }
   };
 
@@ -121,6 +169,7 @@ export default function ProductsPage() {
     <div className="container mx-auto p-6">
       <h1 className="mb-6 text-3xl font-bold text-gray-300">Products</h1>
 
+      {/* CREATE */}
       <div className="mb-8 rounded-lg bg-gray-100 p-6 shadow-md">
         <h2 className="mb-4 text-xl font-semibold text-gray-700">Add New Product</h2>
         {generalError && <p className="mb-4 text-center text-red-500">{generalError}</p>}
@@ -134,7 +183,6 @@ export default function ProductsPage() {
               className={`w-full rounded-md border p-2 text-gray-900 ${
                 errors.name ? 'border-red-500' : ''
               }`}
-              aria-label="Product Name"
             />
             {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
           </div>
@@ -148,7 +196,6 @@ export default function ProductsPage() {
               className={`w-full rounded-md border p-2 text-gray-900 ${
                 errors.price ? 'border-red-500' : ''
               }`}
-              aria-label="Price"
             />
             {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
           </div>
@@ -161,7 +208,6 @@ export default function ProductsPage() {
               className={`w-full rounded-md border p-2 text-gray-900 ${
                 errors.stock ? 'border-red-500' : ''
               }`}
-              aria-label="Stock"
             />
             {errors.stock && <p className="text-sm text-red-500">{errors.stock}</p>}
           </div>
@@ -175,7 +221,7 @@ export default function ProductsPage() {
         </form>
       </div>
 
-      {/* READ: Products Table */}
+      {/* READ */}
       <div className="overflow-x-auto">
         <table className="min-w-full rounded-md bg-white shadow-md">
           <thead>
@@ -199,12 +245,15 @@ export default function ProductsPage() {
                   <td className="border-b px-4 py-2 text-gray-900">{product.name}</td>
                   <td className="border-b px-4 py-2 text-gray-900">
                     {product.price !== null && product.price !== undefined
-                      ? `${currencyFormatter.format(product.price)}`
+                      ? currencyFormatter.format(product.price)
                       : 'N/A'}
                   </td>
                   <td className="border-b px-4 py-2 text-gray-900">{product.stock}</td>
                   <td className="border-b px-4 py-2">
-                    <button className="mr-2 text-blue-600 hover:text-blue-800" disabled>
+                    <button
+                      onClick={() => setEditingProduct(product)}
+                      className="mr-2 text-blue-600 hover:text-blue-800"
+                    >
                       Edit
                     </button>
                     <button
@@ -220,6 +269,79 @@ export default function ProductsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* EDIT MODAL */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-semibold text-gray-700">Edit Product</h2>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <input
+                  type="text"
+                  value={editingProduct.name}
+                  onChange={(e) =>
+                    setEditingProduct({ ...editingProduct, name: e.target.value })
+                  }
+                  className={`w-full rounded-md border p-2 text-gray-900 ${
+                    editErrors.name ? 'border-red-500' : ''
+                  }`}
+                />
+                {editErrors.name && <p className="text-sm text-red-500">{editErrors.name}</p>}
+              </div>
+              <div>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editingProduct.price ?? ''}
+                  onChange={(e) =>
+                    setEditingProduct({
+                      ...editingProduct,
+                      price: parseFloat(e.target.value),
+                    })
+                  }
+                  className={`w-full rounded-md border p-2 text-gray-900 ${
+                    editErrors.price ? 'border-red-500' : ''
+                  }`}
+                />
+                {editErrors.price && <p className="text-sm text-red-500">{editErrors.price}</p>}
+              </div>
+              <div>
+                <input
+                  type="number"
+                  value={editingProduct.stock ?? ''}
+                  onChange={(e) =>
+                    setEditingProduct({
+                      ...editingProduct,
+                      stock: parseInt(e.target.value),
+                    })
+                  }
+                  className={`w-full rounded-md border p-2 text-gray-900 ${
+                    editErrors.stock ? 'border-red-500' : ''
+                  }`}
+                />
+                {editErrors.stock && <p className="text-sm text-red-500">{editErrors.stock}</p>}
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                  disabled={updateLoading}
+                >
+                  {updateLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
