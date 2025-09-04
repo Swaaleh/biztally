@@ -24,6 +24,7 @@ try {
       if (error) {
         throw error;
       }
+      router.push('/dashboard');
     }catch (err: any) {
         setError(err.message);
     }finally {
