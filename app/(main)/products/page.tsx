@@ -100,6 +100,9 @@ export default function ProductsPage() {
     } else if (data && data.length > 0) {
       setProducts((prev) => [data[0], ...prev]);
       setNewProduct({ name: '', price: '', stock: '' });
+      setGeneralError(null);
+    } else {
+      setGeneralError('Product creation failed. Please try again.');
     }
     setAddLoading(false);
   };
@@ -110,7 +113,7 @@ export default function ProductsPage() {
     if (!editingProduct) return;
 
     const { valid, errors } = validateProduct({
-      name: editingProduct.name,
+      name: editingProduct.name ?? '',
       price: editingProduct.price ?? '',
       stock: editingProduct.stock ?? '',
     });
@@ -122,23 +125,27 @@ export default function ProductsPage() {
     setEditErrors({ name: '', price: '', stock: '' });
 
     setUpdateLoading(true);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('products')
       .update({
         name: editingProduct.name,
         price: editingProduct.price,
         stock: editingProduct.stock,
       })
-      .eq('id', editingProduct.id);
+      .eq('id', editingProduct.id)
+      .select('*');
 
     if (error) {
-      setGeneralError('Error updating product.');
+      setGeneralError(error.message || 'Error updating product.');
       console.error(error);
-    } else {
+    } else if (Array.isArray(data) && data.length > 0) {
       setProducts((prev) =>
-        prev.map((p) => (p.id === editingProduct.id ? editingProduct : p))
+        prev.map((p) => (p.id === editingProduct.id ? data[0] : p))
       );
       setEditingProduct(null);
+      setGeneralError(null);
+    } else {
+      setGeneralError('Product update failed. Please try again.');
     }
     setUpdateLoading(false);
   };
@@ -151,9 +158,11 @@ export default function ProductsPage() {
     const { error } = await supabase.from('products').delete().eq('id', productId);
 
     if (error) {
-      setGeneralError('Error deleting product.');
+      setGeneralError(error.message || 'Error deleting product.');
       console.error(error);
       setProducts(originalProducts);
+    } else {
+      setGeneralError(null);
     }
   };
 
@@ -279,7 +288,7 @@ export default function ProductsPage() {
               <div>
                 <input
                   type="text"
-                  value={editingProduct.name}
+                  value={editingProduct.name ?? ''}
                   onChange={(e) =>
                     setEditingProduct({ ...editingProduct, name: e.target.value })
                   }
@@ -293,13 +302,14 @@ export default function ProductsPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={editingProduct.price ?? ''}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      price: parseFloat(e.target.value),
-                    })
-                  }
+                  value={
+                    editingProduct.price === null || editingProduct.price === undefined ? '' : editingProduct.price}
+                      onChange={(e) =>
+                        setEditingProduct({
+                          ...editingProduct,
+                          price: e.target.value === '' ? null : parseFloat(e.target.value),
+                        })
+                      }
                   className={`w-full rounded-md border p-2 text-gray-900 ${
                     editErrors.price ? 'border-red-500' : ''
                   }`}
@@ -309,11 +319,11 @@ export default function ProductsPage() {
               <div>
                 <input
                   type="number"
-                  value={editingProduct.stock ?? ''}
+                  value={editingProduct.stock === null || editingProduct.stock === undefined ? '' : editingProduct.stock}
                   onChange={(e) =>
                     setEditingProduct({
                       ...editingProduct,
-                      stock: parseInt(e.target.value),
+                      stock: e.target.value === '' ? null : parseInt(e.target.value),
                     })
                   }
                   className={`w-full rounded-md border p-2 text-gray-900 ${
