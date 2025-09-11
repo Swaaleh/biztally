@@ -1,5 +1,5 @@
 // app/page.tsx
-import { createClient } from '@/app/_utils/supabase-server';
+import { createClient } from '@/app/_utils/supabase/server';
 import { redirect } from 'next/navigation';
 
 // Data types for our sales data

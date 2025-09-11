@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/_utils/supabase';
+import { createClient } from '@/app/_utils/supabase/client';
 import { Database } from '@/app/_utils/supabase/db-types';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductInsert = Database['public']['Tables']['products']['Insert'];
+type ProductUpdate = Database['public']['Tables']['products']['Update'];
+
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -18,8 +20,8 @@ interface ValidationErrors {
   stock: string;
 }
 
-// Reusable validation function
-function validateProduct(product: { name: string; price: string | number; stock: string | number }) {
+// Shared validation
+function validateProduct(product: { name: string; price: string; stock: string }) {
   const errors: ValidationErrors = { name: '', price: '', stock: '' };
   let valid = true;
 
@@ -27,11 +29,11 @@ function validateProduct(product: { name: string; price: string | number; stock:
     errors.name = 'Product name is required.';
     valid = false;
   }
-  if (!product.price || Number(product.price) <= 0) {
+  if (!product.price || parseFloat(product.price) <= 0) {
     errors.price = 'Price must be a positive number.';
     valid = false;
   }
-  if (product.stock === '' || Number(product.stock) < 0) {
+  if (product.stock === '' || parseInt(product.stock, 10) < 0) {
     errors.stock = 'Stock cannot be negative.';
     valid = false;
   }
@@ -41,15 +43,25 @@ function validateProduct(product: { name: string; price: string | number; stock:
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [newProduct, setNewProduct] = useState({ name: '', price: '', stock: '' });
   const [productsLoading, setProductsLoading] = useState(true);
-  const [addLoading, setAddLoading] = useState(false);
-  const [updateLoading, setUpdateLoading] = useState(false);
-  const [errors, setErrors] = useState<ValidationErrors>({ name: '', price: '', stock: '' });
   const [generalError, setGeneralError] = useState<string | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [editErrors, setEditErrors] = useState<ValidationErrors>({ name: '', price: '', stock: '' });
 
+  // CREATE form state
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', stock: '' });
+  const [addLoading, setAddLoading] = useState(false);
+  const [errors, setErrors] = useState<ValidationErrors>({ name: '', price: '', stock: '' });
+
+  // EDIT modal state
+  const [editingProduct, setEditingProduct] = useState<{
+    id: string;
+    name: string;
+    price: string;
+    stock: string;
+  } | null>(null);
+  const [editErrors, setEditErrors] = useState<ValidationErrors>({ name: '', price: '', stock: '' });
+  const [updateLoading, setUpdateLoading] = useState(false);
+
+  const supabase = createClient();
   // Fetch products
   const fetchProducts = async () => {
     setProductsLoading(true);
@@ -89,7 +101,7 @@ export default function ProductsPage() {
     const productData: ProductInsert = {
       name: newProduct.name,
       price: parseFloat(newProduct.price),
-      stock: parseInt(newProduct.stock),
+      stock: parseInt(newProduct.stock, 10),
     };
 
     const { data, error } = await supabase.from('products').insert(productData).select('*');
@@ -100,9 +112,6 @@ export default function ProductsPage() {
     } else if (data && data.length > 0) {
       setProducts((prev) => [data[0], ...prev]);
       setNewProduct({ name: '', price: '', stock: '' });
-      setGeneralError(null);
-    } else {
-      setGeneralError('Product creation failed. Please try again.');
     }
     setAddLoading(false);
   };
@@ -112,12 +121,7 @@ export default function ProductsPage() {
     e.preventDefault();
     if (!editingProduct) return;
 
-    const { valid, errors } = validateProduct({
-      name: editingProduct.name ?? '',
-      price: editingProduct.price ?? '',
-      stock: editingProduct.stock ?? '',
-    });
-
+    const { valid, errors } = validateProduct(editingProduct);
     if (!valid) {
       setEditErrors(errors);
       return;
@@ -129,8 +133,8 @@ export default function ProductsPage() {
       .from('products')
       .update({
         name: editingProduct.name,
-        price: editingProduct.price,
-        stock: editingProduct.stock,
+        price: parseFloat(editingProduct.price),
+        stock: parseInt(editingProduct.stock, 10),
       })
       .eq('id', editingProduct.id)
       .select('*');
@@ -143,9 +147,6 @@ export default function ProductsPage() {
         prev.map((p) => (p.id === editingProduct.id ? data[0] : p))
       );
       setEditingProduct(null);
-      setGeneralError(null);
-    } else {
-      setGeneralError('Product update failed. Please try again.');
     }
     setUpdateLoading(false);
   };
@@ -161,8 +162,6 @@ export default function ProductsPage() {
       setGeneralError(error.message || 'Error deleting product.');
       console.error(error);
       setProducts(originalProducts);
-    } else {
-      setGeneralError(null);
     }
   };
 
@@ -189,9 +188,7 @@ export default function ProductsPage() {
               placeholder="Product Name"
               value={newProduct.name}
               onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-              className={`w-full rounded-md border p-2 text-gray-900 ${
-                errors.name ? 'border-red-500' : ''
-              }`}
+              className={`w-full rounded-md border p-2 text-gray-900 ${errors.name ? 'border-red-500' : ''}`}
             />
             {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
           </div>
@@ -202,9 +199,7 @@ export default function ProductsPage() {
               value={newProduct.price}
               onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
               step="0.01"
-              className={`w-full rounded-md border p-2 text-gray-900 ${
-                errors.price ? 'border-red-500' : ''
-              }`}
+              className={`w-full rounded-md border p-2 text-gray-900 ${errors.price ? 'border-red-500' : ''}`}
             />
             {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
           </div>
@@ -214,9 +209,7 @@ export default function ProductsPage() {
               placeholder="Stock"
               value={newProduct.stock}
               onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-              className={`w-full rounded-md border p-2 text-gray-900 ${
-                errors.stock ? 'border-red-500' : ''
-              }`}
+              className={`w-full rounded-md border p-2 text-gray-900 ${errors.stock ? 'border-red-500' : ''}`}
             />
             {errors.stock && <p className="text-sm text-red-500">{errors.stock}</p>}
           </div>
@@ -260,7 +253,14 @@ export default function ProductsPage() {
                   <td className="border-b px-4 py-2 text-gray-900">{product.stock}</td>
                   <td className="border-b px-4 py-2">
                     <button
-                      onClick={() => setEditingProduct(product)}
+                      onClick={() =>
+                        setEditingProduct({
+                          id: product.id,
+                          name: product.name ?? '',
+                          price: product.price?.toString() ?? '',
+                          stock: product.stock?.toString() ?? '',
+                        })
+                      }
                       className="mr-2 text-blue-600 hover:text-blue-800"
                     >
                       Edit
@@ -288,13 +288,9 @@ export default function ProductsPage() {
               <div>
                 <input
                   type="text"
-                  value={editingProduct.name ?? ''}
-                  onChange={(e) =>
-                    setEditingProduct({ ...editingProduct, name: e.target.value })
-                  }
-                  className={`w-full rounded-md border p-2 text-gray-900 ${
-                    editErrors.name ? 'border-red-500' : ''
-                  }`}
+                  value={editingProduct.name}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                  className={`w-full rounded-md border p-2 text-gray-900 ${editErrors.name ? 'border-red-500' : ''}`}
                 />
                 {editErrors.name && <p className="text-sm text-red-500">{editErrors.name}</p>}
               </div>
@@ -302,33 +298,18 @@ export default function ProductsPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={
-                    editingProduct.price === null || editingProduct.price === undefined ? '' : editingProduct.price}
-                      onChange={(e) =>
-                        setEditingProduct({
-                          ...editingProduct,
-                          price: e.target.value === '' ? null : parseFloat(e.target.value),
-                        })
-                      }
-                  className={`w-full rounded-md border p-2 text-gray-900 ${
-                    editErrors.price ? 'border-red-500' : ''
-                  }`}
+                  value={editingProduct.price}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
+                  className={`w-full rounded-md border p-2 text-gray-900 ${editErrors.price ? 'border-red-500' : ''}`}
                 />
                 {editErrors.price && <p className="text-sm text-red-500">{editErrors.price}</p>}
               </div>
               <div>
                 <input
                   type="number"
-                  value={editingProduct.stock === null || editingProduct.stock === undefined ? '' : editingProduct.stock}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      stock: e.target.value === '' ? null : parseInt(e.target.value),
-                    })
-                  }
-                  className={`w-full rounded-md border p-2 text-gray-900 ${
-                    editErrors.stock ? 'border-red-500' : ''
-                  }`}
+                  value={editingProduct.stock}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
+                  className={`w-full rounded-md border p-2 text-gray-900 ${editErrors.stock ? 'border-red-500' : ''}`}
                 />
                 {editErrors.stock && <p className="text-sm text-red-500">{editErrors.stock}</p>}
               </div>

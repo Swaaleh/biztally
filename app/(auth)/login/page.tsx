@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/app/_utils/supabase';
+import { createClient } from '@/app/_utils/supabase/client';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,6 +11,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // ✅ create supabase client for browser
+  const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +24,12 @@ try {
         email,
         password,
       });
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
+
+      //  ✅ Redirect after login
       router.push('/dashboard');
+      router.refresh(); // ensures middleware sees the new session
+      
     }catch (err: any) {
         setError(err.message);
     }finally {
