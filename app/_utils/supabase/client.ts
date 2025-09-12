@@ -1,3 +1,4 @@
+//_utils/supabase/client.ts
 import { createBrowserClient } from '@supabase/ssr';
 import { Database } from './db-types';
 

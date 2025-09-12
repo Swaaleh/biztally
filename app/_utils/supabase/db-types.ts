@@ -1,3 +1,4 @@
+//_utils/supabase/db-types.ts
 export type Json =
   | string
   | number
