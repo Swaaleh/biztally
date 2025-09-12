@@ -20,7 +20,7 @@ export async function login(formData: FormData) {
   }
 
   // Redirect to dashboard on successful login
-  return redirect('/dashboard');
+  return redirect('/');
 }
 
 export async function logout() {
