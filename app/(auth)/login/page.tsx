@@ -2,38 +2,21 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/app/_utils/supabase/client';
+import { login } from '@/app/(auth)/actions';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
-  // ✅ create supabase client for browser
-  const supabase = createClient();
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-try {
-    const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-
-      //  ✅ Redirect after login
-      router.push('/dashboard');
-      router.refresh(); // ensures middleware sees the new session
-      
-    }catch (err: any) {
-        setError(err.message);
-    }finally {
-        setLoading(false);    
+    const formData = new FormData(e.currentTarget);
+    const result = await login(formData);
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
     }
   };
 
@@ -49,8 +32,7 @@ try {
             <input
               type="email"
               id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              name="email"
               className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:outline-none"
               required
             />
@@ -62,8 +44,7 @@ try {
             <input
               type="password"
               id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              name="password"
               className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:outline-none"
               required
             />
