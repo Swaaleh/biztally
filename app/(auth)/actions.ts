@@ -17,8 +17,10 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
-    console.error('Login error:', error);
-    return { error: 'Invalid credentials. Please try again.' };
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Login error:', error);
+    }
+    return { error: error.message || 'Invalid credentials. Please try again.' };
   }
 
   revalidatePath('/', 'layout');
@@ -30,7 +32,11 @@ export async function logout() {
   const { error } = await supabase.auth.signOut();
 
   if (error) {
-    console.error('Logout error:', error);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Logout error:', error);
+    }
+    // Optionally return error to UI if needed
+    return { error: error.message || 'Logout failed.' };
   }
 
   revalidatePath('/', 'layout');

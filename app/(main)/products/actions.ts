@@ -17,8 +17,10 @@ export async function createProduct(productData: ProductInsert) {
     .single();
 
   if (error) {
-    console.error('Error creating product:', error);
-    return { error: 'Failed to create product.' };
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error creating product:', error);
+    }
+    return { error: error.message || 'Failed to create product.' };
   }
 
   // Revalidate the products page to show the new product
@@ -37,8 +39,10 @@ export async function updateProduct(id: string, updatedData: ProductUpdate) {
     .single();
 
   if (error) {
-    console.error('Error updating product:', error);
-    return { error: 'Failed to update product.' };
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error updating product:', error);
+    }
+    return { error: error.message || 'Failed to update product.' };
   }
 
   revalidatePath('/products');
@@ -51,8 +55,10 @@ export async function deleteProduct(id: string) {
   const { error } = await supabase.from('products').delete().eq('id', id);
 
   if (error) {
-    console.error('Error deleting product:', error);
-    return { error: 'Failed to delete product.' };
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error deleting product:', error);
+    }
+    return { error: error.message || 'Failed to delete product.' };
   }
 
   revalidatePath('/products');
