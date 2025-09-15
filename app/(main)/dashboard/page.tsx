@@ -53,25 +53,25 @@ export default async function DashboardPage() {
       </p>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg bg-primary dark:bg-gray-800 p-6 shadow">
+        <div className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md border border-border-color">
           <h2 className="text-lg font-semibold text-secondary dark:text-gray-300">Total Revenue</h2>
-          <p className="text-3xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-blue-600">${totalRevenue.toFixed(2)}</p>
         </div>
-        <div className="rounded-lg bg-primary dark:bg-gray-800 p-6 shadow">
+        <div className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md border border-border-color">
           <h2 className="text-lg font-semibold text-secondary dark:text-gray-300">Total Products</h2>
-          <p className="text-3xl font-bold text-primary">{totalProducts || 0}</p>
+          <p className="text-3xl font-bold text-blue-600">{totalProducts || 0}</p>
         </div>
-        <div className="rounded-lg bg-primary dark:bg-gray-800 p-6 shadow">
+        <div className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md border border-border-color">
           <h2 className="text-lg font-semibold text-secondary dark:text-gray-300">Total Customers</h2>
-          <p className="text-3xl font-bold text-primary">{totalCustomers || 0}</p>
+          <p className="text-3xl font-bold text-blue-600">{totalCustomers || 0}</p>
         </div>
-        <div className="rounded-lg bg-primary dark:bg-gray-800 p-6 shadow">
+        <div className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md border border-border-color">
           <h2 className="text-lg font-semibold text-secondary dark:text-gray-300">Top Selling Product</h2>
           <p className="text-3xl font-bold text-green-600">{topSellingProduct}</p>
         </div>
       </div>
 
-      <div className="mt-8 rounded-lg bg-primary dark:bg-gray-800 p-6 shadow">
+  <div className="mt-8 rounded-lg bg-white dark:bg-gray-800 p-6 shadow-md border border-border-color">
         <h2 className="mb-4 text-xl font-semibold text-secondary dark:text-gray-300">Recent Activity</h2>
         <p className="text-secondary dark:text-gray-400">Placeholder for recent sales, new orders, etc.</p>
       </div>

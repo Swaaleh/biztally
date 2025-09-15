@@ -136,7 +136,7 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
       )}
 
       {/* CREATE FORM */}
-      <div className="mb-8 p-6 rounded-lg bg-white dark:bg-gray-800 shadow-md">
+      <div className="mb-8 p-6 rounded-lg bg-white dark:bg-gray-800 shadow-md border border-border-color">
         <h2 className="mb-4 text-xl font-semibold text-gray-700 dark:text-gray-300">Add New Product</h2>
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
@@ -191,7 +191,7 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
           
           <button
             type="submit"
-            className="bg-primary text-white font-medium px-4 py-2 rounded-md transition-colors duration-200 hover:bg-primary/90 disabled:opacity-50"
+            className="bg-blue-600 text-white font-medium px-4 py-2 rounded-md transition-colors duration-200 hover:bg-blue-700 disabled:opacity-50"
             disabled={addLoading}
           >
             {addLoading ? 'Adding...' : 'Add Product'}
@@ -200,7 +200,7 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
       </div>
 
       {/* PRODUCTS TABLE */}
-      <div className="overflow-x-auto rounded-lg bg-white dark:bg-gray-800 shadow-md">
+  <div className="overflow-x-auto rounded-lg bg-white dark:bg-gray-800 shadow-md border border-border-color">
   <table className="min-w-full">
     <thead className="bg-gray-50 dark:bg-gray-700">
       <tr>
@@ -227,7 +227,7 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
         </tr>
             ) : (
               products.map((product) => (
-                <tr key={product.id} className="hover:bg-secondary">
+                <tr key={product.id} className="hover:bg-gray-100 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {product.name}
                   </td>
@@ -270,8 +270,8 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
 
       {/* EDIT MODAL */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6 shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+  <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6 shadow-lg border border-border-color">
             <h2 className="mb-4 text-xl font-semibold text-gray-700 dark:text-gray-300">Edit Product</h2>
             
             {generalError && (
@@ -338,7 +338,7 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
                 </button>
                 <button
                   type="submit"
-                  className="bg-primary text-white font-medium px-4 py-2 rounded-md transition-colors duration-200 hover:bg-primary/90 disabled:opacity-50"
+                  className="bg-blue-600 text-white font-medium px-4 py-2 rounded-md transition-colors duration-200 hover:bg-blue-700 disabled:opacity-50"
                   disabled={updateLoading}
                 >
                   {updateLoading ? 'Saving...' : 'Save'}

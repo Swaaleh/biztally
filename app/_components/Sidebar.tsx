@@ -49,14 +49,14 @@ export default function Sidebar() {
       </button>
 
       <aside
-        className={`fixed left-0 top-0 z-40 h-screen w-64 transition-transform bg-primary dark:bg-gray-800 ${
+        className={`fixed left-0 top-0 z-40 h-screen w-64 transition-transform bg-gray-900 dark:bg-gray-800 border-r border-border-color shadow-lg ${
           open ? 'translate-x-0' : '-translate-x-full'
         } sm:translate-x-0`}
         aria-label="Sidebar"
       >
         <div className="h-full overflow-y-auto px-3 py-4">
           <div className="flex items-center justify-between mb-6 px-4">
-            <h1 className="text-xl font-bold text-primary dark:text-white">Biztally</h1>
+            {/* Remove duplicate Biztally name from sidebar */}
             <ThemeToggle />
           </div>
           <ul className="space-y-2">
@@ -70,8 +70,8 @@ export default function Sidebar() {
                     href={item.href}
                     className={`flex items-center rounded-lg p-2 text-base font-medium transition-colors ${
                       isActive
-                        ? 'bg-primary text-white'
-                        : 'text-secondary hover:bg-secondary/80'
+                        ? 'bg-blue-600 text-white shadow'
+                        : 'text-gray-300 hover:bg-gray-700'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
