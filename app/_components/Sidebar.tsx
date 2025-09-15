@@ -22,10 +22,10 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 -translate-x-full transition-transform sm:translate-x-0 bg-gray-800 dark:bg-gray-800">
+  <aside className="fixed left-0 top-0 z-40 h-screen w-64 -translate-x-full transition-transform sm:translate-x-0 bg-primary dark:bg-gray-800">
       <div className="h-full overflow-y-auto px-3 py-4">
-      <div className="flex items-center justify-between mb-6 px-4">
-          <h1 className="text-xl font-bold text-white">Biztally</h1>
+    <div className="flex items-center justify-between mb-6 px-4">
+      <h1 className="text-xl font-bold text-primary dark:text-white">Biztally</h1>
           <ThemeToggle />
         </div>
         <ul className="space-y-2">
@@ -39,8 +39,8 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center rounded-lg p-2 text-base font-medium transition-colors ${
                     isActive
-                      ? 'bg-blue-700 text-white'
-                      : 'text-gray-300 hover:bg-gray-700'
+                      ? 'bg-primary text-white'
+                      : 'text-secondary hover:bg-secondary/80'
                   }`}
                 >
                   <Icon className="h-5 w-5" />

@@ -191,7 +191,7 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
           
           <button
             type="submit"
-            className="btn-primary"
+            className="bg-primary text-white font-medium px-4 py-2 rounded-md transition-colors duration-200 hover:bg-primary/90 disabled:opacity-50"
             disabled={addLoading}
           >
             {addLoading ? 'Adding...' : 'Add Product'}
@@ -227,7 +227,7 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
         </tr>
             ) : (
               products.map((product) => (
-                <tr key={product.id} className="table-row-hover">
+                <tr key={product.id} className="hover:bg-secondary">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {product.name}
                   </td>
@@ -338,7 +338,7 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary"
+                  className="bg-primary text-white font-medium px-4 py-2 rounded-md transition-colors duration-200 hover:bg-primary/90 disabled:opacity-50"
                   disabled={updateLoading}
                 >
                   {updateLoading ? 'Saving...' : 'Save'}
