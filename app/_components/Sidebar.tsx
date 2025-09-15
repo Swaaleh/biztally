@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 import { 
   HomeIcon, 
@@ -13,7 +14,8 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  
+  const [open, setOpen] = useState(false);
+
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Sales', href: '/sales', icon: ShoppingCartIcon },
@@ -22,35 +24,73 @@ export default function Sidebar() {
   ];
 
   return (
-  <aside className="fixed left-0 top-0 z-40 h-screen w-64 -translate-x-full transition-transform sm:translate-x-0 bg-primary dark:bg-gray-800">
-      <div className="h-full overflow-y-auto px-3 py-4">
-    <div className="flex items-center justify-between mb-6 px-4">
-      <h1 className="text-xl font-bold text-primary dark:text-white">Biztally</h1>
-          <ThemeToggle />
+    <>
+      {/* Mobile toggle button */}
+      <button
+        className="fixed top-4 left-4 z-50 sm:hidden p-2 rounded-md bg-primary text-white shadow focus:outline-none"
+        aria-label={open ? 'Close sidebar' : 'Open sidebar'}
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span className="sr-only">Toggle sidebar</span>
+        {/* Hamburger icon */}
+        <svg
+          className="h-6 w-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {open ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          )}
+        </svg>
+      </button>
+
+      <aside
+        className={`fixed left-0 top-0 z-40 h-screen w-64 transition-transform bg-primary dark:bg-gray-800 ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        } sm:translate-x-0`}
+        aria-label="Sidebar"
+      >
+        <div className="h-full overflow-y-auto px-3 py-4">
+          <div className="flex items-center justify-between mb-6 px-4">
+            <h1 className="text-xl font-bold text-primary dark:text-white">Biztally</h1>
+            <ThemeToggle />
+          </div>
+          <ul className="space-y-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+
+              return (
+                <li key={item.name}>
+                  <Link
+                    href={item.href}
+                    className={`flex items-center rounded-lg p-2 text-base font-medium transition-colors ${
+                      isActive
+                        ? 'bg-primary text-white'
+                        : 'text-secondary hover:bg-secondary/80'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="ml-3">{item.name}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </div>
-        <ul className="space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            
-            return (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center rounded-lg p-2 text-base font-medium transition-colors ${
-                    isActive
-                      ? 'bg-primary text-white'
-                      : 'text-secondary hover:bg-secondary/80'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="ml-3">{item.name}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </aside>
+      </aside>
+      {/* Overlay for mobile sidebar */}
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black bg-opacity-40 sm:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+    </>
   );
 }
