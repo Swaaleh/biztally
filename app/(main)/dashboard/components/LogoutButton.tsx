@@ -1,13 +1,18 @@
+//app/(main)/dashboard/components/LogoutButton.tsx
+'use client';
 import { useState } from "react";
-import { logout } from "@/app/(main)/actions";
+import { logout } from "@/app/(auth)/actions";
+import { useRouter } from "next/navigation";
 
 export default function LogoutButton() {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogout = async () => {
     setLoading(true);
     await logout();
-    // No need to manually redirect; the server action handles it.
+    router.refresh();
+    setLoading(false);
   };
 
   return (
@@ -22,23 +27,3 @@ export default function LogoutButton() {
     </form>
   );
 }
-// Compare this snippet from app/%28main%29/actions.ts:
-// 'use server';
-//
-// import { createClient } from '@/app/_utils/supabase/server';
-// import { redirect } from 'next/navigation';
-//
-// export async function fetchUser() {
-//   const supabase = await createClient();
-//   const { data: { user } } = await supabase.auth.getUser();
-//   return user;
-// }
-//
-// export async function logout() {
-//   const supabase = await createClient();     
-//   const { error } = await supabase.auth.signOut();
-//
-//   if (error) {
-//     console.error('Logout error:', error);
-//     // You can handle this error, but for a simple logout, it's often not needed.
-//   }

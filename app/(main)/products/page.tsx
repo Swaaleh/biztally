@@ -1,3 +1,4 @@
+//app/products/page.tsx
 import { createClient } from '@/app/_utils/supabase/server';
 import { Database } from '@/app/_utils/supabase/db-types';
 import ProductsClientPage from './components/ProductsClientPage';

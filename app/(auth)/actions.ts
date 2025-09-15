@@ -1,7 +1,9 @@
+// app/(auth)/actions.ts
 'use server';
 
 import { createClient } from '@/app/_utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 
 export async function login(formData: FormData) {
   const email = formData.get('email') as string;
@@ -19,8 +21,8 @@ export async function login(formData: FormData) {
     return { error: 'Invalid credentials. Please try again.' };
   }
 
-  // Redirect to dashboard on successful login
-  return redirect('/');
+  revalidatePath('/', 'layout');
+  redirect('/dashboard');
 }
 
 export async function logout() {
@@ -29,9 +31,8 @@ export async function logout() {
 
   if (error) {
     console.error('Logout error:', error);
-    // You can handle this error, but for a simple logout, it's often not needed.
   }
 
-  // Redirect to login page after signing out
-  return redirect('/login');
+  revalidatePath('/', 'layout');
+  redirect('/login');
 }

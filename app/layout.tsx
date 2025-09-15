@@ -1,7 +1,8 @@
+//app/layout.tsx
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import Sidebar from './_components/Sidebar';
+import { ThemeProvider } from './_components/ThemeProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -16,15 +17,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <div className="flex">
-          <Sidebar />
-          <main className="ml-64 w-full p-8">
-            {/* The main content for each page will be rendered here */}
-            {children}
-          </main>
-        </div>
+        <ThemeProvider defaultTheme='system'>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

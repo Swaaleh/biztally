@@ -1,54 +1,48 @@
+// app/(main)/products/components/ProductsClientPage.tsx
 'use client';
-
-import { useState } from 'react';
+import { useState, useReducer } from 'react';
 import {
   createProduct,
   updateProduct,
   deleteProduct,
 } from '@/app/(main)/products/actions';
 import { Database } from '@/app/_utils/supabase/db-types';
+import { currencyFormatter, validateProduct, ValidationErrors } from '@/app/_utils/helpers';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductInsert = Database['public']['Tables']['products']['Insert'];
 type ProductUpdate = Database['public']['Tables']['products']['Update'];
 
-// currencyFormatter, ValidationErrors, validateProduct functions are the same...
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-});
-
-interface ValidationErrors {
-  name: string;
-  price: string;
-  stock: string;
-}
-
-function validateProduct(product: { name: string; price: string; stock: string }) {
-  const errors: ValidationErrors = { name: '', price: '', stock: '' };
-  let valid = true;
-
-  if (!product.name.trim()) {
-    errors.name = 'Product name is required.';
-    valid = false;
-  }
-  if (!product.price || parseFloat(product.price) <= 0) {
-    errors.price = 'Price must be a positive number.';
-    valid = false;
-  }
-  if (product.stock === '' || parseInt(product.stock, 10) < 0) {
-    errors.stock = 'Stock cannot be negative.';
-    valid = false;
-  }
-
-  return { valid, errors };
-}
-
 interface ProductsClientPageProps {
   initialProducts: Product[];
 }
 
+// State management reducer
+type ProductAction =
+  | { type: 'SET_PRODUCTS'; payload: Product[] }
+  | { type: 'ADD_PRODUCT'; payload: Product }
+  | { type: 'UPDATE_PRODUCT'; payload: Product }
+  | { type: 'DELETE_PRODUCT'; payload: string };
+
+function productReducer(state: Product[], action: ProductAction): Product[] {
+  switch (action.type) {
+    case 'SET_PRODUCTS':
+      return action.payload;
+    case 'ADD_PRODUCT':
+      return [action.payload, ...state];
+    case 'UPDATE_PRODUCT':
+      return state.map(product => 
+        product.id === action.payload.id ? action.payload : product
+      );
+    case 'DELETE_PRODUCT':
+      return state.filter(product => product.id !== action.payload);
+    default:
+      return state;
+  }
+}
+
 export default function ProductsClientPage({ initialProducts }: ProductsClientPageProps) {
+  const [products, dispatch] = useReducer(productReducer, initialProducts);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -81,11 +75,12 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
       price: parseFloat(newProduct.price),
       stock: parseInt(newProduct.stock, 10),
     };
-    const { error } = await createProduct(productData);
+    const { data, error } = await createProduct(productData);
 
     if (error) {
       setGeneralError(error);
-    } else {
+    } else if (data) {
+      dispatch({ type: 'ADD_PRODUCT', payload: data });
       setNewProduct({ name: '', price: '', stock: '' });
     }
     setAddLoading(false);
@@ -107,11 +102,12 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
       price: parseFloat(editingProduct.price),
       stock: parseInt(editingProduct.stock, 10),
     };
-    const { error } = await updateProduct(editingProduct.id, updatedData);
+    const { data, error } = await updateProduct(editingProduct.id, updatedData);
 
     if (error) {
       setGeneralError(error);
-    } else {
+    } else if (data) {
+      dispatch({ type: 'UPDATE_PRODUCT', payload: data });
       setEditingProduct(null);
     }
     setUpdateLoading(false);
@@ -123,53 +119,79 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
     const { error } = await deleteProduct(productId);
     if (error) {
       setGeneralError(error);
+    } else {
+      dispatch({ type: 'DELETE_PRODUCT', payload: productId });
     }
     setDeletingId(null);
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="mb-6 text-3xl font-bold text-gray-900">Products</h1>
+    <div className="mx-auto p-6 max-w-7xl">
+      <h1 className="mb-6 text-3xl font-bold text-gray-900 dark:text-white">Products</h1>
 
-      {/* CREATE */}
-      <div className="mb-8 rounded-lg bg-gray-100 p-6 shadow-md">
-        <h2 className="mb-4 text-xl font-semibold text-gray-700">Add New Product</h2>
-        {generalError && <p className="mb-4 text-center text-red-500">{generalError}</p>}
+      {generalError && (
+        <div className="mb-4 p-4 rounded-md bg-red-50 dark:bg-red-900/20">
+          <p className="text-red-800 dark:text-red-200">{generalError}</p>
+        </div>
+      )}
+
+      {/* CREATE FORM */}
+      <div className="mb-8 p-6 rounded-lg bg-white dark:bg-gray-800 shadow-md">
+        <h2 className="mb-4 text-xl font-semibold text-gray-700 dark:text-gray-300">Add New Product</h2>
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
+            <label htmlFor="product-name" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Product Name
+            </label>
             <input
+              id="product-name"
               type="text"
               placeholder="Product Name"
               value={newProduct.name}
               onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-              className={`w-full rounded-md border p-2 text-gray-900 ${errors.name ? 'border-red-500' : ''}`}
+              className={`w-full p-2 rounded-md border ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
             />
-            {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+            {errors.name && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>}
           </div>
-          <div>
-            <input
-              type="number"
-              placeholder="Price"
-              value={newProduct.price}
-              onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-              step="0.01"
-              className={`w-full rounded-md border p-2 text-gray-900 ${errors.price ? 'border-red-500' : ''}`}
-            />
-            {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="product-price" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Price
+              </label>
+              <input
+                id="product-price"
+                type="number"
+                placeholder="Price"
+                value={newProduct.price}
+                onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                step="0.01"
+                min="0"
+                className={`w-full p-2 rounded-md border ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.price && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.price}</p>}
+            </div>
+            
+            <div>
+              <label htmlFor="product-stock" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Stock
+              </label>
+              <input
+                id="product-stock"
+                type="number"
+                placeholder="Stock"
+                value={newProduct.stock}
+                onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                min="0"
+                className={`w-full p-2 rounded-md border ${errors.stock ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.stock && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.stock}</p>}
+            </div>
           </div>
-          <div>
-            <input
-              type="number"
-              placeholder="Stock"
-              value={newProduct.stock}
-              onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-              className={`w-full rounded-md border p-2 text-gray-900 ${errors.stock ? 'border-red-500' : ''}`}
-            />
-            {errors.stock && <p className="text-sm text-red-500">{errors.stock}</p>}
-          </div>
+          
           <button
             type="submit"
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            className="btn-primary"
             disabled={addLoading}
           >
             {addLoading ? 'Adding...' : 'Add Product'}
@@ -177,35 +199,47 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
         </form>
       </div>
 
-      {/* READ */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full rounded-md bg-white shadow-md">
-          <thead>
-            <tr>
-              <th className="border-b px-4 py-2 text-left text-gray-700">Name</th>
-              <th className="border-b px-4 py-2 text-left text-gray-700">Price</th>
-              <th className="border-b px-4 py-2 text-left text-gray-700">Stock</th>
-              <th className="border-b px-4 py-2 text-left text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {initialProducts.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="p-4 text-center text-gray-400">
-                  No products found.
-                </td>
-              </tr>
+      {/* PRODUCTS TABLE */}
+      <div className="overflow-x-auto rounded-lg bg-white dark:bg-gray-800 shadow-md">
+  <table className="min-w-full">
+    <thead className="bg-gray-50 dark:bg-gray-700">
+      <tr>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+          Name
+        </th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+          Price
+        </th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+          Stock
+        </th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+          Actions
+        </th>
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+      {products.length === 0 ? (
+        <tr>
+          <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+            No products found.
+          </td>
+        </tr>
             ) : (
-              initialProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
-                  <td className="border-b px-4 py-2 text-gray-900">{product.name}</td>
-                  <td className="border-b px-4 py-2 text-gray-900">
+              products.map((product) => (
+                <tr key={product.id} className="table-row-hover">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                    {product.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {product.price !== null && product.price !== undefined
                       ? currencyFormatter.format(product.price)
                       : 'N/A'}
                   </td>
-                  <td className="border-b px-4 py-2 text-gray-900">{product.stock}</td>
-                  <td className="border-b px-4 py-2">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    {product.stock}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() =>
                         setEditingProduct({
@@ -215,13 +249,13 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
                           stock: product.stock?.toString() ?? '',
                         })
                       }
-                      className="mr-2 text-blue-600 hover:text-blue-800"
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                       disabled={deletingId === product.id}
                     >
                       {deletingId === product.id ? 'Deleting...' : 'Delete'}
@@ -236,49 +270,75 @@ export default function ProductsClientPage({ initialProducts }: ProductsClientPa
 
       {/* EDIT MODAL */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-xl font-semibold text-gray-700">Edit Product</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-semibold text-gray-700 dark:text-gray-300">Edit Product</h2>
+            
+            {generalError && (
+              <div className="mb-4 p-3 rounded-md bg-red-50 dark:bg-red-900/20">
+                <p className="text-red-800 dark:text-red-200">{generalError}</p>
+              </div>
+            )}
+            
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
+                <label htmlFor="edit-name" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Product Name
+                </label>
                 <input
+                  id="edit-name"
                   type="text"
                   value={editingProduct.name}
                   onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  className={`w-full rounded-md border p-2 text-gray-900 ${editErrors.name ? 'border-red-500' : ''}`}
+                  className={`w-full p-2 rounded-md border ${editErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                 />
-                {editErrors.name && <p className="text-sm text-red-500">{editErrors.name}</p>}
+                {editErrors.name && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{editErrors.name}</p>}
               </div>
-              <div>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editingProduct.price}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
-                  className={`w-full rounded-md border p-2 text-gray-900 ${editErrors.price ? 'border-red-500' : ''}`}
-                />
-                {editErrors.price && <p className="text-sm text-red-500">{editErrors.price}</p>}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="edit-price" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Price
+                  </label>
+                  <input
+                    id="edit-price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editingProduct.price}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
+                    className={`w-full p-2 rounded-md border ${editErrors.price ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {editErrors.price && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{editErrors.price}</p>}
+                </div>
+                
+                <div>
+                  <label htmlFor="edit-stock" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Stock
+                  </label>
+                  <input
+                    id="edit-stock"
+                    type="number"
+                    min="0"
+                    value={editingProduct.stock}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
+                    className={`w-full p-2 rounded-md border ${editErrors.stock ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {editErrors.stock && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{editErrors.stock}</p>}
+                </div>
               </div>
-              <div>
-                <input
-                  type="number"
-                  value={editingProduct.stock}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
-                  className={`w-full rounded-md border p-2 text-gray-900 ${editErrors.stock ? 'border-red-500' : ''}`}
-                />
-                {editErrors.stock && <p className="text-sm text-red-500">{editErrors.stock}</p>}
-              </div>
-              <div className="flex justify-end space-x-2">
+              
+              <div className="flex justify-end space-x-2 pt-4">
                 <button
                   type="button"
                   onClick={() => setEditingProduct(null)}
-                  className="rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
+                  className="px-4 py-2 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                  className="btn-primary"
                   disabled={updateLoading}
                 >
                   {updateLoading ? 'Saving...' : 'Save'}
